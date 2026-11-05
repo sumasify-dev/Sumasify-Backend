@@ -41,24 +41,21 @@ export async function findOrdersByBuyerId({
   });
 }
 
+export async function findOrderById({ orderId }) {
+  return prisma.order.findUnique({
+    where: {
+      id: orderId,
+    },
+    include: orderInclude,
+  });
+}
+
+
 export async function countOrdersByBuyerId({ buyerId, status }) {
   return prisma.order.count({
     where: {
       buyerId,
       ...(status ? { status } : {}),
     },
-  });
-}
-
-export async function findOrderByIdAndBuyerId({
-  orderId,
-  buyerId,
-}) {
-  return prisma.order.findFirst({
-    where: {
-      id: orderId,
-      buyerId,
-    },
-    include: orderInclude,
   });
 }
