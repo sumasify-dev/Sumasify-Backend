@@ -538,7 +538,7 @@ model Payment {
   method          PaymentMethod @default(BANK_TRANSFER)
   status          PaymentStatus @default(AWAITING_SUBMISSION)
   amount          Decimal       @db.Decimal(12, 2)
-  bankReference   String?       @map("bank_reference")
+  bankReference   String?       @unique @map("bank_reference")
   proofStorageKey String?       @map("proof_storage_key")
   submittedAt     DateTime?     @map("submitted_at")
   verifiedAt      DateTime?     @map("verified_at")
