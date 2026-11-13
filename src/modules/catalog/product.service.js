@@ -32,7 +32,7 @@ function toProductDto(product) {
     })),
     vendor: {
       id: product.vendor.id,
-      businessname: product.vendor.businessName,
+      businessName: product.vendor.businessName,
       slug: product.vendor.slug,
     },
   };
@@ -40,15 +40,16 @@ function toProductDto(product) {
 
 export async function listPublicProducts(filters) {
   const [total, products] = await findPublicProducts(filters);
-  const totalpages = Math.ceil(total / filters.pagesize);
+  const pageSize = filters.pageSize ?? filters.pagesize ?? 20;
+  const totalPages = Math.ceil(total / pageSize);
 
   return {
     data: products.map(toProductDto),
     meta: {
       page: filters.page,
-      pagesize: filters.pagesize,
+      pageSize,
       total,
-      totalpages,
+      totalPages,
     },
   };
 }

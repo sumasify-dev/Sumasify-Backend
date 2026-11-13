@@ -16,8 +16,8 @@ export const listProducts = asyncHandler(async (req, res) => {
 });
 
 export const getProduct = asyncHandler(async (req, res) => {
-  const { productid } = productIdSchema.parse(req.params);
-  const product = await getPublicProduct(productid);
+  const { productId } = productIdSchema.parse(req.params);
+  const product = await getPublicProduct(productId);
 
   res.status(200).json({
     data: product,

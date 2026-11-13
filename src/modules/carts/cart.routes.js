@@ -11,14 +11,14 @@ const router = Router();
 router.get("/cart", authenticate, authorizeRoles("BUYER"), getCart);
 
 router.put(
-  "/cart/items/:productid",
+  "/cart/items/:productId",
   authenticate,
   authorizeRoles("BUYER"),
   updateCartItem,
 );
 
 router.delete(
-  "/cart/items/:productid",
+  "/cart/items/:productId",
   authenticate,
   authorizeRoles("BUYER"),
   deleteCartItem,

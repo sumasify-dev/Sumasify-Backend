@@ -19,12 +19,12 @@ export const getCart = async (req, res, next) => {
 
 export const updateCartItem = async (req, res, next) => {
   try {
-    const { productid } = productIdSchema.parse(req.params);
+    const { productId } = productIdSchema.parse(req.params);
     const { quantity } = updateCartItemSchema.parse(req.body);
 
     const cart = await updateBuyerCartItem({
       buyerId: req.user.id,
-      productId: productid,
+      productId,
       quantity,
     });
 
@@ -38,11 +38,11 @@ export const updateCartItem = async (req, res, next) => {
 
 export const deleteCartItem = async (req, res, next) => {
   try {
-    const { productid } = productIdSchema.parse(req.params);
+    const { productId } = productIdSchema.parse(req.params);
 
     await removeBuyerCartItem({
       buyerId: req.user.id,
-      productId: productid,
+      productId,
     });
 
     return res.status(204).send();

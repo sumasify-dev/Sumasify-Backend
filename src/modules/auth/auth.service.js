@@ -72,24 +72,24 @@ async function createUserRefreshSession(user, req) {
 function toSafeUser(user) {
   return {
     id: user.id,
-    fullname: user.fullName,
+    fullName: user.fullName,
     email: user.email,
     role: user.role.toLowerCase(),
-    accountstatus: user.accountStatus.toLowerCase(),
+    accountStatus: user.accountStatus.toLowerCase(),
   };
 }
 
 function toAuthUser(user) {
   return {
     id: user.id,
-    fullname: user.fullName,
+    fullName: user.fullName,
     email: user.email,
     role: user.role.toLowerCase(),
-    accountstatus: user.accountStatus.toLowerCase(),
+    accountStatus: user.accountStatus.toLowerCase(),
     vendor: user.vendor
       ? {
           id: user.vendor.id,
-          businessname: user.vendor.businessName,
+          businessName: user.vendor.businessName,
           status: user.vendor.status.toLowerCase(),
         }
       : null,
@@ -115,7 +115,7 @@ export async function registerUser(data, req) {
   const now = new Date();
 
   const user = await createUser({
-    fullName: data.fullname,
+    fullName: data.fullName ?? data.fullname,
     email: data.email,
     phoneE164: data.phone ?? null,
     passwordHash,
@@ -349,7 +349,7 @@ if (resetToken.expiresAt <= new Date()) {
   );
 }
   const passwordHash = await bcrypt.hash(
-    data.newpassword,
+    data.newPassword ?? data.newpassword,
     SALT_ROUNDS
   );
 

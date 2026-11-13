@@ -94,7 +94,8 @@ function orderByFor(sort) {
 
 export function findPublicProducts(filters) {
   const where = buildWhere(filters);
-  const skip = (filters.page - 1) * filters.pagesize;
+  const pageSize = filters.pageSize ?? filters.pagesize ?? 20;
+  const skip = (filters.page - 1) * pageSize;
 
   return prisma.$transaction([
     prisma.product.count({ where }),
@@ -103,7 +104,7 @@ export function findPublicProducts(filters) {
       select: publicProductSelect,
       orderBy: orderByFor(filters.sort),
       skip,
-      take: filters.pagesize,
+      take: pageSize,
     }),
   ]);
 }

@@ -20,8 +20,12 @@ export const listProductsSchema = z.object({
     .transform((value) => value === undefined ? undefined : value === "true"),
   sort: z.enum(["newest", "price_asc", "price_desc"]).default("newest"),
   page: z.coerce.number().int().min(1).default(1),
-  pagesize: z.coerce.number().int().min(1).max(50).default(20),
-}).superRefine((value, ctx) => {
+  pageSize: z.coerce.number().int().min(1).max(50).optional(),
+  pagesize: z.coerce.number().int().min(1).max(50).optional(),
+}).transform((data) => ({
+  ...data,
+  pageSize: data.pageSize ?? data.pagesize ?? 20,
+})).superRefine((value, ctx) => {
   if (value.minPrice !== undefined && value.maxPrice !== undefined) {
     if (Number(value.minPrice) > Number(value.maxPrice)) {
       ctx.addIssue({
@@ -33,6 +37,14 @@ export const listProductsSchema = z.object({
   }
 });
 
-export const productIdSchema = z.object({
-  productid: uuid,
-});
+export const productIdSchema = z
+  .object({
+    productId: uuid.optional(),
+    productid: uuid.optional(),
+  })
+  .transform((data) => ({
+    productId: data.productId ?? data.productid,
+  }))
+  .refine((data) => Boolean(data.productId), {
+    message: "Invalid product id",
+  });

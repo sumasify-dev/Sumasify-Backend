@@ -24,29 +24,59 @@ export const listCategoriesSchema = z.object({
     .transform((value) => value === "true"),
 });
 
-export const createCategorySchema = z.object({
-  name: categoryName,
-  slug: categorySlug.optional(),
-  sortorder: z.coerce
-    .number()
-    .int("Sort order must be an integer")
-    .min(0, "Sort order cannot be negative")
-    .default(0),
-});
-
-export const updateCategorySchema = z
+export const createCategorySchema = z
   .object({
-    name: categoryName.optional(),
+    name: categoryName,
     slug: categorySlug.optional(),
+    sortOrder: z.coerce
+      .number()
+      .int("Sort order must be an integer")
+      .min(0, "Sort order cannot be negative")
+      .optional(),
     sortorder: z.coerce
       .number()
       .int("Sort order must be an integer")
       .min(0, "Sort order cannot be negative")
       .optional(),
   })
-  .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one category field must be provided",
-  });
+  .transform((data) => ({
+    name: data.name,
+    slug: data.slug,
+    sortOrder: data.sortOrder ?? data.sortorder ?? 0,
+  }));
+
+export const updateCategorySchema = z
+  .object({
+    name: categoryName.optional(),
+    slug: categorySlug.optional(),
+    sortOrder: z.coerce
+      .number()
+      .int("Sort order must be an integer")
+      .min(0, "Sort order cannot be negative")
+      .optional(),
+    sortorder: z.coerce
+      .number()
+      .int("Sort order must be an integer")
+      .min(0, "Sort order cannot be negative")
+      .optional(),
+  })
+  .refine(
+    (value) =>
+      value.name !== undefined ||
+      value.slug !== undefined ||
+      value.sortOrder !== undefined ||
+      value.sortorder !== undefined,
+    {
+      message: "At least one category field must be provided",
+    }
+  )
+  .transform((data) => ({
+    ...(data.name !== undefined && { name: data.name }),
+    ...(data.slug !== undefined && { slug: data.slug }),
+    ...((data.sortOrder !== undefined || data.sortorder !== undefined) && {
+      sortOrder: data.sortOrder ?? data.sortorder,
+    }),
+  }));
 
 const booleanQueryOrBody = z.preprocess((value) => {
   if (value === "true" || value === true) return true;

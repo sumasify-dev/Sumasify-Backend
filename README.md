@@ -438,3 +438,306 @@ Successful response:
 ```
 
 ---
+
+# Address API (supporting checkout)
+
+The contract requires `addressid` at checkout but defines no address creation
+flow, so these buyer-scoped supporting endpoints are provided.
+
+Requires `BUYER` authorization.
+
+## List addresses
+
+```http
+GET /api/v1/addresses
+```
+
+## Create address
+
+```http
+POST /api/v1/addresses
+```
+
+```json
+{
+  "label": "Home",
+  "recipientname": "Ada Obi",
+  "phone": "08012345678",
+  "areacode": "400001",
+  "addressline": "12 University Road",
+  "instructions": "Call on arrival",
+  "isdefault": true
+}
+```
+
+The first address automatically becomes the default. Setting `isdefault: true`
+atomically clears the previous default.
+
+---
+
+# Checkout API
+
+Requires `BUYER` authorization.
+
+## Preview checkout
+
+```http
+POST /api/v1/checkout/preview
+```
+
+```json
+{
+  "addressid": "uuid",
+  "deliverypreferences": {
+    "vendor-uuid": { "method": "DELIVERY" }
+  }
+}
+```
+
+All prices, delivery fees, commission and totals are recalculated from the
+database. A delivery preference is required for every vendor in the cart.
+
+## Create order
+
+```http
+POST /api/v1/checkout/orders
+Idempotency-Key: <unique-client-generated-key>
+```
+
+```json
+{
+  "addressid": "uuid",
+  "deliverypreferences": {
+    "vendor-uuid": { "method": "DELIVERY" }
+  },
+  "paymentmethod": "BANK_TRANSFER"
+}
+```
+
+Order creation runs in a single transaction: stock is rechecked and reserved,
+the parent order, vendor groups, item snapshots, pending payment and stock
+reservations are created, and the cart is cleared. Reusing an idempotency key
+returns the original result; reusing it with a different payload returns
+`409 IDEMPOTENCY_KEY_CONFLICT`.
+
+V1 commerce settings (`COMMISSION_RATE_BPS`, `DELIVERY_FEE_AMOUNT`,
+`STOCK_RESERVATION_MINUTES`, platform bank details) are documented in
+`PRD_UNCOMPLETED_MODULES.md` §4.1 and configured through environment variables.
+
+---
+
+# Admin Payment Verification
+
+Requires `ADMIN` authorization.
+
+```http
+PATCH /api/v1/admin/payments/:paymentid
+```
+
+Verify:
+
+```json
+{
+  "decision": "VERIFIED"
+}
+```
+
+Reject:
+
+```json
+{
+  "decision": "rejected",
+  "rejectionreason": "Transfer could not be reconciled."
+}
+```
+
+A decision is only allowed once, and only for a `SUBMITTED` payment.
+Verification marks the payment `VERIFIED`, the parent order `PAID`, moves
+`PENDING_PAYMENT` vendor groups to `NEW`, and commits reserved stock. Rejection
+marks the payment and order rejected and releases reserved stock. Each decision
+writes an `AdminAuditLog` in the same transaction.
+
+---
+
+# Vendor Applications and Profile
+
+Requires `BUYER` authorization.
+
+## Submit application
+
+```http
+POST /api/v1/vendor-applications
+```
+
+```json
+{
+  "businessname": "Kemi's Store",
+  "contactphone": "+2348012345678",
+  "description": "Fashion and accessories store",
+  "categorynotes": "Fashion"
+}
+```
+
+Only one `PENDING` application is allowed per buyer. A rejected buyer may
+re-apply.
+
+## View own application
+
+```http
+GET /api/v1/vendor-applications/me
+```
+
+Returns the latest application, or `{ "data": null }` when none exists.
+
+## Vendor profile
+
+Requires `VENDOR` authorization and an `ACTIVE` vendor record.
+
+```http
+GET   /api/v1/vendor/profile
+PATCH /api/v1/vendor/profile
+```
+
+Editable fields: `businessname`, `contactphone`, `pickupaddress`,
+`deliverynotes`. Ownership, approval state, status and slug are not
+client-controlled.
+
+---
+
+# Admin Vendor Applications
+
+Requires `ADMIN` authorization.
+
+```http
+GET   /api/v1/admin/vendor-applications?status=pending&page=1&pagesize=20
+PATCH /api/v1/admin/vendor-applications/:id
+```
+
+Approve or reject:
+
+```json
+{ "decision": "approved" }
+```
+
+```json
+{ "decision": "rejected", "rejectionreason": "Insufficient business information." }
+```
+
+Approval atomically creates or reactivates the vendor record, promotes the user
+to `VENDOR`, finalises the application and writes an `AdminAuditLog`. Decisions
+are only valid while the application is `pending`.
+
+---
+
+# Vendor Products and Inventory
+
+Requires `VENDOR` authorization and an `ACTIVE` vendor record.
+
+```http
+GET   /api/v1/vendor/products?status=active&page=1&pagesize=20
+POST  /api/v1/vendor/products
+PATCH /api/v1/vendor/products/:productid
+PATCH /api/v1/vendor/products/:productid/inventory
+```
+
+Create a product:
+
+```json
+{
+  "name": "Vintage Denim",
+  "description": "Classic denim jacket",
+  "priceamount": "20000.00",
+  "categoryid": "uuid",
+  "stockonhand": 10,
+  "imageids": ["upload-uuid"]
+}
+```
+
+The server owns the vendor id, `ACTIVE` status, availability, `publishedAt` and
+stock validation. `imageids` must reference unused uploads owned by the same
+vendor. `PATCH` accepts `name`, `description`, `priceamount`, `categoryid` and
+additional `imageids` (maximum 5 images per product).
+
+Inventory updates cannot drop `stockonhand` below `stockreserved`:
+
+```json
+{
+  "stockonhand": 25
+}
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "productid": "uuid",
+    "stockonhand": 25,
+    "stockreserved": 3,
+    "availablestock": 22
+  }
+}
+```
+
+---
+
+# Product Image Uploads
+
+Requires `VENDOR` authorization and an `ACTIVE` vendor record.
+
+```http
+POST /api/v1/uploads/product-images
+Content-Type: multipart/form-data
+```
+
+Use the file field `image` (or `file`). JPEG, PNG and WebP only, maximum 5 MB.
+Images are stored in Cloudinary; only metadata is persisted in PostgreSQL.
+
+```json
+{
+  "data": {
+    "uploadid": "uuid",
+    "url": "https://...",
+    "storagekey": "...",
+    "contenttype": "image/jpeg",
+    "width": 1200,
+    "height": 1200,
+    "bytes": 240000
+  }
+}
+```
+
+Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET`;
+optionally override `CLOUDINARY_PRODUCT_FOLDER` (default
+`sumasify/products`).
+
+---
+
+# Vendor Orders and Fulfilment
+
+Requires `VENDOR` authorization and an `ACTIVE` vendor record.
+
+```http
+GET   /api/v1/vendor/orders?status=NEW&page=1&pagesize=20
+GET   /api/v1/vendor/orders/:groupid
+PATCH /api/v1/vendor/orders/:groupid/status
+```
+
+Vendors only see their own vendor order groups. Status updates must follow the
+approved lifecycle one step at a time:
+
+```text
+PENDING_PAYMENT → NEW → CONFIRMED → READY → OUT_FOR_DELIVERY → DELIVERED → COMPLETED
+```
+
+```json
+{
+  "status": "READY",
+  "vendornotes": "Order packed and ready for pickup."
+}
+```
+
+A vendor can never advance a `PENDING_PAYMENT` group, verify payment, or settle
+their own orders. Reaching `DELIVERED` marks the group
+`ELIGIBLE_AFTER_DELIVERY`; the parent order moves to `IN_FULFILMENT` while any
+group is active and to `COMPLETED` once every group is finished.

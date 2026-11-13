@@ -6,6 +6,31 @@ import {
 
 import { AppError } from "../../middleware/utils/AppError.js";
 
+/**
+ * Derive the parent order state from an authoritative payment decision.
+ * Payment verification services must not hard-code order status transitions.
+ */
+export function deriveOrderStatusAfterPayment(paymentStatus) {
+  if (paymentStatus === "VERIFIED") {
+    return {
+      status: "PAID",
+      paymentStatus: "VERIFIED",
+    };
+  }
+
+  if (paymentStatus === "REJECTED") {
+    return {
+      status: "PAYMENT_REJECTED",
+      paymentStatus: "REJECTED",
+    };
+  }
+
+  return {
+    status: "PAYMENT_REVIEW",
+    paymentStatus: "SUBMITTED",
+  };
+}
+
 function formatMoney(amount) {
   return amount.toFixed(2);
 }

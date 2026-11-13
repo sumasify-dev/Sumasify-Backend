@@ -1,8 +1,16 @@
 import { z } from "zod";
 
-export const productIdSchema = z.object({
-  productid: z.string().uuid("Invalid product id"),
-});
+export const productIdSchema = z
+  .object({
+    productId: z.string().uuid("Invalid product id").optional(),
+    productid: z.string().uuid("Invalid product id").optional(),
+  })
+  .transform((data) => ({
+    productId: data.productId ?? data.productid,
+  }))
+  .refine((data) => Boolean(data.productId), {
+    message: "Invalid product id",
+  });
 
 export const updateCartItemSchema = z.object({
   quantity: z.coerce

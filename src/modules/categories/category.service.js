@@ -19,7 +19,7 @@ function toCategoryDto(category) {
     id: category.id,
     name: category.name,
     slug: category.slug,
-    sortorder: category.sortOrder,
+    sortOrder: category.sortOrder,
   };
 }
 
@@ -48,7 +48,7 @@ export async function createAdminCategory(data, adminUserId) {
   const payload = {
     name: data.name,
     slug: data.slug ?? slugify(data.name),
-    sortOrder: data.sortorder,
+    sortOrder: data.sortOrder ?? data.sortorder ?? 0,
     isActive: true,
   };
 
@@ -83,7 +83,9 @@ export async function updateAdminCategory(categoryId, data, adminUserId) {
   const payload = {
     ...(data.name !== undefined && { name: data.name }),
     ...(data.slug !== undefined && { slug: data.slug }),
-    ...(data.sortorder !== undefined && { sortOrder: data.sortorder }),
+    ...((data.sortOrder !== undefined || data.sortorder !== undefined) && {
+      sortOrder: data.sortOrder ?? data.sortorder,
+    }),
   };
 
   try {
