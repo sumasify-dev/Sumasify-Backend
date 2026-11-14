@@ -268,8 +268,13 @@ model Vendor {
   contactPhone  String       @map("contact_phone")
   pickupAddress String?      @map("pickup_address")
   deliveryNotes String?      @map("delivery_notes")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Vendor's delivery fee in NGN.
+  // Pickup orders always have a delivery fee of zero.
+  deliveryFeeAmount Decimal @default(0) @map("delivery_fee_amount") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   approvedBy User? @relation("VendorApprover", fields: [approvedById], references: [id])
