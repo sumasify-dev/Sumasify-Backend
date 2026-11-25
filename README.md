@@ -712,3 +712,7 @@ Expected result:
 - Product reserved stock is reduced.
 
 Do not perform expiry tests against real customer orders.
+
+- ```http
+  GET api/v1/admin/dashboard
+  ```
